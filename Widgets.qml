@@ -26,6 +26,8 @@ Item {
   property bool storeRead: false
   property bool covered: false
   property bool sharing: false
+  // settings.json: { "blurBehind": true } once Hyprland has a blur layer rule for "eduardo-widgets"
+  property bool blurBehind: false
 
   function finish() {
     if (mode === "edit") save()
@@ -81,6 +83,32 @@ Item {
         if (path !== "") root.glass = "file://" + path
       }
     }
+  }
+
+  FileView {
+    path: root.configDir + "/settings.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: {
+      try { root.blurBehind = JSON.parse(text()).blurBehind === true } catch (error) { root.blurBehind = false }
+    }
+    onLoadFailed: root.blurBehind = false
+  }
+
+  // bound with hl.dsp.global("eduardo:widgets.peek"), a keypress then spawns nothing
+  GlobalShortcut {
+    appid: "eduardo"
+    name: "widgets.peek"
+    description: "Lift the desktop widgets above the windows, or put them back"
+    onPressed: root.mode === "desktop" ? root.mode = "peek" : root.finish()
+  }
+
+  GlobalShortcut {
+    appid: "eduardo"
+    name: "widgets.edit"
+    description: "Edit the desktop widgets"
+    onPressed: root.mode = "edit"
   }
 
   FileView {
@@ -188,6 +216,7 @@ Item {
         editing: root.mode === "edit"
         live: window.live
         shielded: root.sharing
+        blurBehind: root.blurBehind
         focus: true
 
         onWidthChanged: placing.restart()

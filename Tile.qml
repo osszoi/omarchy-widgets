@@ -13,6 +13,8 @@ Item {
   property real screenY: 0
   property size screenSize: Qt.size(0, 0)
   property bool flush: false
+  // the compositor blurs what is behind the tile, so the wallpaper copy stays out of the way
+  property bool clear: false
   default property alias content: body.data
 
   RectangularShadow {
@@ -27,7 +29,7 @@ Item {
   ClippingRectangle {
     anchors.fill: parent
     radius: tile.theme.radius
-    color: frost.status === Image.Ready ? "transparent" : tile.theme.solid
+    color: tile.clear ? tile.theme.veil : frost.status === Image.Ready ? "transparent" : tile.theme.solid
 
     Image {
       id: frost
@@ -36,6 +38,7 @@ Item {
       width: tile.screenSize.width
       height: tile.screenSize.height
       source: tile.glass
+      visible: !tile.clear
       fillMode: Image.PreserveAspectCrop
       asynchronous: true
       smooth: true
@@ -43,7 +46,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      visible: frost.status === Image.Ready
+      visible: !tile.clear && frost.status === Image.Ready
       color: tile.theme.tint
     }
 

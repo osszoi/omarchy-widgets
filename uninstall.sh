@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# takes the plugin and its launcher entries out. the layout and the home assistant token stay in ~/.config/omarchy-widgets
+# takes the plugin out. the layout and the home assistant token stay in ~/.config/omarchy-widgets
 set -euo pipefail
 
 ID=eduardo.widgets

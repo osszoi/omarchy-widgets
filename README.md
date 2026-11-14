@@ -17,14 +17,23 @@ iPhone-style widgets on the Omarchy desktop: frosted glass tiles on a grid, unde
 
     ./install.sh
 
-Links the folder as `eduardo.widgets`, enables it and adds two launcher entries.
+Links the folder as `eduardo.widgets` and enables it.
 
 ## Using it
 
-- **Widgets** (launcher) or `omarchy-shell widgets peek`: lifts the tiles above the windows. Esc or a click outside puts them back.
-- **Edit Widgets** or `omarchy-shell widgets edit`, or hold a tile for a moment: the tiles wiggle. Drag to move, pull the
-  corner of the selected one to resize, minus to remove, **+ Add widget** to add. **Done** or Esc saves.
+- `omarchy-shell widgets peek` lifts the tiles above the windows and puts them back; Esc or a click outside also
+  closes it. Bind it to a key in your Hyprland config, the global shortcut spawns no process:
+
+      o.bind("SUPER + grave", "Widgets", hl.dsp.global("eduardo:widgets.peek"))
+
+- **Edit** in the lifted view, `omarchy-shell widgets edit`, or holding a tile for a moment: the tiles wiggle. Drag to
+  move, pull the corner of the selected one to resize, minus to remove, **+ Add widget** to add. **Done** or Esc saves.
 - `omarchy-shell widgets status` says what it is doing.
+
+To have the lifted view blur what is behind it, add a layer rule and tell the plugin about it in
+`~/.config/omarchy-widgets/settings.json` (`{ "blurBehind": true }`), so the tiles turn into see-through glass there:
+
+    hl.layer_rule({ match = { namespace = "^eduardo-widgets$" }, blur = true, ignore_alpha = 0.3 })
 
 The layout is `~/.config/omarchy-widgets/layout.json`. Each item can carry a `cfg` object for its widget:
 

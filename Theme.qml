@@ -14,6 +14,8 @@ QtObject {
   readonly property color well: Qt.rgba(1, 1, 1, 0.10)
   readonly property color track: Qt.rgba(1, 1, 1, 0.16)
   readonly property color tint: Qt.rgba(0.086, 0.078, 0.133, 0.5)
+  // over windows the compositor has blurred
+  readonly property color veil: Qt.rgba(0.086, 0.078, 0.133, 0.46)
   // what a tile falls back to before the blurred wallpaper is there
   readonly property color solid: Qt.rgba(0.11, 0.10, 0.17, 0.82)
 

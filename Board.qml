@@ -15,6 +15,9 @@ Item {
   property bool editing: false
   property bool live: true
   property bool shielded: false
+  // true when a Hyprland layer rule blurs what is behind this window while it is lifted
+  property bool blurBehind: false
+  readonly property bool seeThrough: lifted && blurBehind
 
   readonly property var grid: Layout.metrics(width, height, theme.unit, theme.gap, 40, inset)
   property string selected: ""
@@ -111,7 +114,7 @@ Item {
   Rectangle {
     anchors.fill: parent
     color: "#05040a"
-    opacity: board.lifted ? 0.42 : 0
+    opacity: board.lifted ? (board.blurBehind ? 0.36 : 0.42) : 0
     visible: opacity > 0
     Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
@@ -221,6 +224,7 @@ Item {
         screenY: slot.y
         screenSize: Qt.size(board.width, board.height)
         flush: slot.type === "cams"
+        clear: board.seeThrough
 
         Loader {
           anchors.fill: parent
@@ -351,6 +355,15 @@ Item {
 
     Pill { text: board.full ? "No room left" : "+ Add widget"; onPressed: { board.full = false; board.picking = !board.picking } }
     Pill { text: "Done"; strong: true; onPressed: board.dismissed() }
+  }
+
+  Pill {
+    visible: board.lifted && !board.editing
+    anchors.horizontalCenter: parent.horizontalCenter
+    y: board.inset + 14
+    z: 50
+    text: "Edit"
+    onPressed: board.editWanted()
   }
 
   Rectangle {
