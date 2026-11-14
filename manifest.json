@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "eduardo.widgets",
+  "name": "Widgets",
+  "version": "0.1.0",
+  "author": "eduardo",
+  "license": "MIT",
+  "description": "iPhone-style widgets on the desktop: agenda, cameras, now playing, GPU, system, budget, home and 3D printer. Drag, resize, add and remove them like a home screen. Nothing updates while they are out of sight.",
+  "kinds": [
+    "service"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Widgets.qml"
+  },
+  "homepage": "https://github.com/osszoi/omarchy-widgets"
+}

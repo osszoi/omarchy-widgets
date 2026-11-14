@@ -1,0 +1,20 @@
+#!/bin/bash
+# blurred, saturated copy of the current wallpaper for the tiles' frosted glass. prints where it is
+set -euo pipefail
+
+link=${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/background
+wall=$(readlink -f "$link")
+[[ -f $wall ]] || exit 1
+
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/omarchy-widgets
+key=$(printf '%s %s' "$wall" "$(stat -c %Y "$wall")" | md5sum | cut -c1-16)
+out=$cache/glass-$key.jpg
+
+if [[ ! -s $out ]]; then
+  mkdir -p "$cache"
+  find "$cache" -maxdepth 1 -name 'glass-*.jpg' -delete
+  # small on purpose, stretching it back up is most of the blur
+  magick "$wall" -resize 640x -blur 0x4 -modulate 100,165 -quality 90 "$cache/glass-$key.part.jpg"
+  mv "$cache/glass-$key.part.jpg" "$out"
+fi
+echo "$out"
