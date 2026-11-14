@@ -21,7 +21,7 @@ Item {
   readonly property var streams: Array.isArray(options.streams) ? options.streams : []
   readonly property string cacheDir: (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/omarchy-widgets/cams"
   readonly property var all: cams.concat(streams.map(function(stream) {
-    return { id: stream.id, name: stream.name || Data.camName(stream.id), online: true, pull: stream.url }
+    return { id: stream.id, name: stream.name || Data.camName(stream.id), online: true, pull: stream.url, live: stream.live !== false }
   }))
   property bool pulling: false
 
@@ -148,11 +148,17 @@ Item {
       required property int index
       readonly property real gap: 6
       readonly property bool pulled: modelData.pull !== undefined
+      // live: false is for a battery camera. the tile never wakes it, something else writes the picture
+      // (a recorder when the doorbell rings) and <id>.json next to it says when, and whether it is recording now
+      readonly property bool passive: pulled && !modelData.live
       readonly property string still: widget.cacheDir + "/" + modelData.id + ".jpg"
-      readonly property bool wanted: pulled && widget.pulling
+      readonly property bool wanted: pulled && !passive && widget.pulling
+      property var note: null
       // pictures that arrived since the stream was started, the first one is the one kept on disk
       property int fresh: 0
-      readonly property bool current: !pulled || (wanted && puller.running && fresh > 2)
+      readonly property bool current: passive ? !!(note && note.recording) : !pulled || (wanted && puller.running && fresh > 2)
+      readonly property string badge: !modelData.online ? "OFFLINE" : current ? (passive ? "RING" : "LIVE")
+        : passive && note && note.at ? Data.stamp(note.at * 1000, Date.now()) : "LAST"
       property bool flip: false
       property bool seen: false
       readonly property int tall: Math.ceil(Math.max(height, width * 9 / 16) / 60) * 60
@@ -166,7 +172,7 @@ Item {
         var back = flip ? first : second
         if (back.status === Image.Loading || !modelData.online) return
         if (pulled) {
-          if (seen && !wanted) return
+          if (seen && !wanted && !(passive && current)) return
           back.source = "file://" + still + "?" + widget.frame
         } else {
           back.source = widget.base + "/api/" + modelData.id + "/latest.jpg?height=" + tall + "&quality=70&_=" + widget.frame
@@ -186,6 +192,30 @@ Item {
       onWantedChanged: fresh = 0
 
       Component.onCompleted: if (pulled) load()
+
+      // read again every few seconds while in view: the writer replaces the file, which a watch does not follow
+      property string noteText: ""
+
+      FileView {
+        id: noteFile
+        path: cell.passive ? widget.cacheDir + "/" + cell.modelData.id + ".json" : ""
+        printErrors: false
+        onLoaded: {
+          var content = text()
+          if (content === cell.noteText) return
+          cell.noteText = content
+          try { cell.note = JSON.parse(content) } catch (error) { cell.note = null }
+          cell.seen = false
+          cell.load()
+        }
+      }
+
+      Timer {
+        interval: 3000
+        repeat: true
+        running: cell.passive && widget.rolling
+        onTriggered: noteFile.reload()
+      }
 
       Process {
         id: puller
@@ -295,7 +325,7 @@ Item {
             anchors.centerIn: parent
             spacing: 4
             Rectangle { visible: cell.modelData.online && cell.current; width: 6; height: 6; radius: 3; color: widget.host.theme.red; anchors.verticalCenter: parent.verticalCenter }
-            Label { text: !cell.modelData.online ? "OFFLINE" : cell.current ? "LIVE" : "LAST"; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 0.5 }
+            Label { text: cell.badge; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 0.5 }
           }
         }
       }

@@ -98,6 +98,9 @@ assert.deepStrictEqual(plain(D.camGrid(5, 324, 864)), { cols: 1, rows: 5 }, "a 2
 assert.deepStrictEqual(plain(D.camGrid(4, 324, 864)), { cols: 1, rows: 4 })
 assert.deepStrictEqual(plain(D.camGrid(3, 324, 144)), { cols: 2, rows: 2 }, "wide cells beat tall slivers, even with a hole")
 assert.strictEqual(D.camName("puerta_principal"), "Puerta principal")
+assert.strictEqual(D.stamp(at(14, 20, 31).getTime(), at(14, 21, 5).getTime()), "20:31")
+assert.strictEqual(D.stamp(at(13, 9, 5).getTime(), at(14, 21, 5).getTime()), "YDAY 09:05")
+assert.strictEqual(D.stamp(at(2, 9, 5).getTime(), at(14, 21, 5).getTime()), "2 NOV 09:05")
 
 const lines = [{ t: 1000, text: "a" }, { t: 5000, text: "b" }, { t: 9000, text: "c" }]
 assert.strictEqual(D.lyricLine(lines, 0), -1)

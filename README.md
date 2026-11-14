@@ -45,7 +45,9 @@ The layout is `~/.config/omarchy-widgets/layout.json`. Each item can carry a `cf
 `streams` are cameras Frigate does not decode, such as an on-demand one in its restreamer. One `ffmpeg` per stream
 writes a still a second, and only once the tile has been in view for two seconds; it stops the moment the tile is
 out of sight. The last picture stays in `~/.cache/omarchy-widgets/cams`, so the cell shows it (marked LAST) until
-a fresh one arrives.
+a fresh one arrives. A stream with `"live": false` (a battery camera such as a Ring doorbell) is never pulled by the
+tile: something else writes `<id>.jpg` and `<id>.json` (`{ "at": epoch, "recording": bool }`) into that folder, and
+the tile shows the picture with its time, or RING while recording. A click still opens the live stream in mpv.
 
 ## Home Assistant
 
