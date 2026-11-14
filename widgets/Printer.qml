@@ -18,7 +18,7 @@ Item {
     live: widget.host.live
     every: 10000
     template: "{ {% for e in integration_entities('bambu_lab') %}{{ e|tojson }}:{\"s\":{{ states(e)|tojson }},\"u\":{{ (state_attr(e,'unit_of_measurement') or '')|tojson }},"
-      + "\"a\":{\"color\":{{ state_attr(e,'color')|tojson }},\"active\":{{ state_attr(e,'active')|tojson }}}}{% if not loop.last %},{% endif %}{% endfor %} }"
+      + "\"a\":{\"color\":{{ state_attr(e,'color')|tojson }},\"active\":{{ state_attr(e,'active')|tojson }},\"empty\":{{ state_attr(e,'empty')|tojson }}}}{% if not loop.last %},{% endif %}{% endfor %} }"
   }
 
   Item {

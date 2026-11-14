@@ -107,7 +107,7 @@ console.log("data ok")
 let p = D.printer({
   "sensor.a1_print_progress": { s: "62", u: "%" },
   "sensor.a1_print_status": { s: "running" },
-  "sensor.a1_task_name": { s: "cable_clip_v3.3mf" },
+  "sensor.a1_task_name": { s: "cable_clip_v3.3mf " },
   "sensor.a1_remaining_time": { s: "72", u: "min" },
   "sensor.a1_current_layer": { s: "148" },
   "sensor.a1_total_layer_count": { s: "240" },
@@ -120,6 +120,7 @@ let p = D.printer({
 assert.strictEqual(p.found, true)
 assert.strictEqual(p.progress, 0.62)
 assert.strictEqual(p.label, "Printing")
+assert.strictEqual(p.task, "cable_clip_v3.3mf", "names come with stray spaces")
 assert.strictEqual(p.busy, true)
 assert.strictEqual(p.remaining, 72 * 60)
 assert.strictEqual(p.layer, 148)
@@ -127,6 +128,7 @@ assert.strictEqual(p.nozzle, 220.4)
 assert.strictEqual(p.bed, null, "an unavailable sensor is no reading, not zero")
 assert.deepStrictEqual(plain(p.trays), [{ color: "#000000", active: false, empty: true }, { color: "#FF453A", active: true, empty: false }])
 assert.strictEqual(D.printer({ "sensor.a1_remaining_time": { s: "1.2", u: "h" } }).remaining, 4320)
+assert.strictEqual(D.printer({ "sensor.a1_ams_1_tray_1": { s: "Bambu PLA Basic", a: { color: "#FFFFFFFF", active: false, empty: true } } }).trays[0].empty, true)
 assert.strictEqual(D.printer({}).found, false)
 assert.strictEqual(D.printer({ "sensor.a1_print_status": { s: "finish" } }).busy, false)
 console.log("printer ok")
