@@ -20,8 +20,14 @@ Item {
   property int misses: 0
   readonly property string secrets: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/omarchy-widgets/home-assistant.json"
 
+  property var asked: []
+
+  // an answer must not arrive for a tile that is already gone
+  Component.onDestruction: asked.forEach(function(request) { request.abort() })
+
   function post(path, body, done) {
     var request = new XMLHttpRequest()
+    asked = asked.filter(function(old) { return old.readyState !== XMLHttpRequest.DONE }).concat([request])
     request.onreadystatechange = function() {
       if (request.readyState === XMLHttpRequest.DONE) done(request.status, request.responseText)
     }

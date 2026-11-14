@@ -25,6 +25,8 @@ Item {
   property int calm: 0
   readonly property var grid: Data.camGrid(cams.length, width, height)
 
+  property var asked: []
+
   function fetch(url, done) {
     var request = new XMLHttpRequest()
     request.onreadystatechange = function() {
@@ -32,7 +34,11 @@ Item {
     }
     request.open("GET", url)
     request.send()
+    asked = asked.filter(function(old) { return old.readyState !== XMLHttpRequest.DONE }).concat([request])
   }
+
+  // an answer must not arrive for a tile that is already gone
+  Component.onDestruction: asked.forEach(function(request) { request.abort() })
 
   function discover() {
     fetch(base + "/api/config", function(text) {

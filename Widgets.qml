@@ -22,6 +22,7 @@ Item {
   property url glass: ""
   property string saved: ""
   property var stored: null
+  property string placed: ""
   property bool storeRead: false
   property bool covered: false
   property bool sharing: false
@@ -37,6 +38,7 @@ Item {
     if (text === saved) return
     saved = text
     stored = Layout.parse(text)
+    placed = JSON.stringify(surface.item.items(""))
     layoutFile.setText(text)
   }
 
@@ -105,6 +107,7 @@ Item {
     respectInhibitors: false
   }
 
+  Timer { id: placing; interval: 80; onTriggered: if (surface.item) surface.item.place() }
   Timer { id: settle; interval: 150; onTriggered: { Hyprland.refreshToplevels(); assess.restart() } }
   Timer { id: assess; interval: 200; onTriggered: if (surface.item) surface.item.assess() }
 
@@ -143,9 +146,14 @@ Item {
 
       function items(skip) { return board.items(skip) }
 
+      // the window gets its size in steps, and tiles are only rebuilt when the result differs
       function place() {
         if (!root.storeRead || board.width <= 0) return
-        board.load(root.stored ? Layout.place(board.grid, root.stored) : Layout.starter(board.grid))
+        var next = root.stored ? Layout.place(board.grid, root.stored) : Layout.starter(board.grid)
+        var key = JSON.stringify(next)
+        if (key === root.placed) return
+        root.placed = key
+        board.load(next)
       }
 
       // tiled windows fill the screen, so one of them means the tiles are out of sight
@@ -182,9 +190,9 @@ Item {
         shielded: root.sharing
         focus: true
 
-        onWidthChanged: window.place()
-        onHeightChanged: window.place()
-        onInsetChanged: window.place()
+        onWidthChanged: placing.restart()
+        onHeightChanged: placing.restart()
+        onInsetChanged: placing.restart()
         onEdited: root.save()
         onEditWanted: root.mode = "edit"
         onDismissed: root.finish()
