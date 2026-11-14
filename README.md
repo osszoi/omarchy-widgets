@@ -39,8 +39,13 @@ The layout is `~/.config/omarchy-widgets/layout.json`. Each item can carry a `cf
 
 | Widget | `cfg` |
 |---|---|
-| Cameras | `frigate` (default `http://localhost:5000`), `fps` (0.2 to 5, default 1), `names` `{ id: "Name" }`, `skip` `[ids]`, `stream` (default `rtsp://localhost:8554/{cam}`) |
+| Cameras | `frigate` (default `http://localhost:5000`), `fps` (0.2 to 5, default 1), `names` `{ id: "Name" }`, `skip` `[ids]`, `stream` (default `rtsp://localhost:8554/{cam}`), `streams` `[{ id, name, url }]` |
 | Home | `tiles` `[{ entity, name, hold, icon }]`, `chips` `[{ entity, label, quiet }]` |
+
+`streams` are cameras Frigate does not decode, such as an on-demand one in its restreamer. One `ffmpeg` per stream
+writes a still a second, and only once the tile has been in view for two seconds; it stops the moment the tile is
+out of sight. The last picture stays in `~/.cache/omarchy-widgets/cams`, so the cell shows it (marked LAST) until
+a fresh one arrives.
 
 ## Home Assistant
 

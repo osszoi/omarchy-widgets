@@ -38,6 +38,8 @@ assert(Math.abs(spot.col - agenda.col) + Math.abs(spot.row - agenda.row) <= 2, "
 
 assert.deepStrictEqual(plain(L.snapSize("cams", 3, 2)), { w: 2, h: 2 }, "a tie goes to the first size listed")
 assert.deepStrictEqual(plain(L.snapSize("cams", 4, 2)), { w: 4, h: 2 })
+assert.deepStrictEqual(plain(L.snapSize("cams", 4, 3)), { w: 4, h: 3 }, "cameras can grow taller")
+assert.deepStrictEqual(plain(L.snapSize("cams", 2, 5)), { w: 2, h: 5 }, "or become one column")
 assert.deepStrictEqual(plain(L.snapSize("gpu", 5, 5)), { w: 2, h: 1 })
 assert.deepStrictEqual(plain(L.snapSize("budget", 1, 3)), { w: 1, h: 1 })
 

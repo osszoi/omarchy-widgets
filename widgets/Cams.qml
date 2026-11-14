@@ -14,7 +14,29 @@ Item {
   readonly property string base: options.frigate || "http://localhost:5000"
   readonly property string stream: options.stream || "rtsp://localhost:8554/{cam}"
   readonly property real rate: Math.max(0.2, Math.min(5, Number(options.fps) || 1))
-  readonly property bool rolling: host.live && !host.shielded && cams.length > 0
+  readonly property bool rolling: host.live && !host.shielded && all.length > 0
+
+  // cameras that are not Frigate's: a stream is only pulled while the tile has been in view for a moment,
+  // and its last picture stays on disk so the cell is never blank
+  readonly property var streams: Array.isArray(options.streams) ? options.streams : []
+  readonly property string cacheDir: (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/omarchy-widgets/cams"
+  readonly property var all: cams.concat(streams.map(function(stream) {
+    return { id: stream.id, name: stream.name || Data.camName(stream.id), online: true, pull: stream.url }
+  }))
+  property bool pulling: false
+
+  onRollingChanged: if (!rolling) pulling = false
+
+  Timer {
+    interval: 2000
+    running: widget.rolling && !widget.pulling && widget.streams.length > 0
+    onTriggered: widget.pulling = true
+  }
+
+  Process {
+    running: widget.streams.length > 0
+    command: ["mkdir", "-p", widget.cacheDir]
+  }
 
   property var cams: []
   property int frame: 0
@@ -23,7 +45,7 @@ Item {
   property int lastTicks: -1
   property int busy: 0
   property int calm: 0
-  readonly property var grid: Data.camGrid(cams.length, width, height)
+  readonly property var grid: Data.camGrid(all.length, width, height)
 
   property var asked: []
 
@@ -117,7 +139,7 @@ Item {
   Process { id: player }
 
   Repeater {
-    model: widget.cams
+    model: widget.all
 
     Item {
       id: cell
@@ -125,9 +147,15 @@ Item {
       required property var modelData
       required property int index
       readonly property real gap: 6
+      readonly property bool pulled: modelData.pull !== undefined
+      readonly property string still: widget.cacheDir + "/" + modelData.id + ".jpg"
+      readonly property bool wanted: pulled && widget.pulling
+      // pictures that arrived since the stream was started, the first one is the one kept on disk
+      property int fresh: 0
+      readonly property bool current: !pulled || (wanted && puller.running && fresh > 2)
       property bool flip: false
       property bool seen: false
-      readonly property int wanted: Math.ceil(Math.max(height, width * 9 / 16) / 60) * 60
+      readonly property int tall: Math.ceil(Math.max(height, width * 9 / 16) / 60) * 60
 
       x: (index % widget.grid.cols) * (width + gap)
       y: Math.floor(index / widget.grid.cols) * (height + gap)
@@ -137,14 +165,39 @@ Item {
       function load() {
         var back = flip ? first : second
         if (back.status === Image.Loading || !modelData.online) return
-        back.source = widget.base + "/api/" + modelData.id + "/latest.jpg?height=" + wanted + "&quality=70&_=" + widget.frame
+        if (pulled) {
+          if (seen && !wanted) return
+          back.source = "file://" + still + "?" + widget.frame
+        } else {
+          back.source = widget.base + "/api/" + modelData.id + "/latest.jpg?height=" + tall + "&quality=70&_=" + widget.frame
+        }
       }
 
       function arrived(image) {
         if (image.status !== Image.Ready || image !== (flip ? first : second)) return
         flip = !flip
         seen = true
+        if (wanted) fresh++
       }
+
+      // true for a while after the far end hung up, so it is not hammered
+      property bool resting: false
+
+      onWantedChanged: fresh = 0
+
+      Component.onCompleted: if (pulled) load()
+
+      Process {
+        id: puller
+        // a binding, not a call: cells are rebuilt when the camera list changes and must pick the stream up again
+        running: cell.wanted && !cell.resting
+        // every frame is decoded: a ring cam sends a keyframe only every 10 to 20 seconds. 640x360 costs under 1% of a core
+        command: ["ffmpeg", "-nostdin", "-loglevel", "error", "-rtsp_transport", "tcp", "-i", String(cell.modelData.pull || ""),
+                  "-vf", "fps=" + widget.rate + ",scale=-2:360", "-q:v", "5", "-f", "image2", "-update", "1", "-atomic_writing", "1", "-y", cell.still]
+        onExited: if (cell.wanted) { cell.resting = true; again.restart() }
+      }
+
+      Timer { id: again; interval: 10000; onTriggered: cell.resting = false }
 
       Connections {
         target: widget
@@ -207,14 +260,14 @@ Item {
           width: badge.width + 14
           height: 17
           radius: 9
-          color: cell.modelData.online ? Qt.rgba(0, 0, 0, 0.45) : Qt.rgba(1, 0.27, 0.23, 0.85)
+          color: !cell.modelData.online ? Qt.rgba(1, 0.27, 0.23, 0.85) : Qt.rgba(0, 0, 0, 0.45)
 
           Row {
             id: badge
             anchors.centerIn: parent
             spacing: 4
-            Rectangle { visible: cell.modelData.online; width: 6; height: 6; radius: 3; color: widget.host.theme.red; anchors.verticalCenter: parent.verticalCenter }
-            Label { text: cell.modelData.online ? "LIVE" : "OFFLINE"; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 0.5 }
+            Rectangle { visible: cell.modelData.online && cell.current; width: 6; height: 6; radius: 3; color: widget.host.theme.red; anchors.verticalCenter: parent.verticalCenter }
+            Label { text: !cell.modelData.online ? "OFFLINE" : cell.current ? "LIVE" : "LAST"; font.pixelSize: 10; font.weight: Font.Bold; font.letterSpacing: 0.5 }
           }
         }
       }
@@ -224,7 +277,7 @@ Item {
         enabled: !widget.host.editing
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-          player.command = ["mpv", "--no-terminal", "--profile=low-latency", "--title=" + cell.modelData.name, widget.stream.replace("{cam}", cell.modelData.id)]
+          player.command = ["mpv", "--no-terminal", "--profile=low-latency", "--title=" + cell.modelData.name, cell.modelData.pull || widget.stream.replace("{cam}", cell.modelData.id)]
           player.startDetached()
         }
       }
@@ -232,7 +285,7 @@ Item {
   }
 
   Label {
-    visible: widget.cams.length === 0
+    visible: widget.all.length === 0
     anchors.centerIn: parent
     tone: 1
     font.pixelSize: 12
