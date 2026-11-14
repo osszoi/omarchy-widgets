@@ -19,6 +19,8 @@ Item {
   readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/$/, "")
 
   property string mode: "desktop"
+  // the window on the screen, null while there is no screen
+  property var surface: null
   property url glass: ""
   property string saved: ""
   property var stored: null
@@ -35,12 +37,12 @@ Item {
   }
 
   function save() {
-    if (!surface.item) return
-    var text = Layout.serialize(surface.item.items(""))
+    if (!root.surface) return
+    var text = Layout.serialize(root.surface.items(""))
     if (text === saved) return
     saved = text
     stored = Layout.parse(text)
-    placed = JSON.stringify(surface.item.items(""))
+    placed = JSON.stringify(root.surface.items(""))
     layoutFile.setText(text)
   }
 
@@ -64,11 +66,11 @@ Item {
       root.saved = content
       root.stored = Layout.parse(content)
       root.storeRead = true
-      if (surface.item) surface.item.place()
+      if (root.surface) root.surface.place()
     }
     onLoadFailed: {
       root.storeRead = true
-      if (surface.item) surface.item.place()
+      if (root.surface) root.surface.place()
     }
   }
 
@@ -135,9 +137,9 @@ Item {
     respectInhibitors: false
   }
 
-  Timer { id: placing; interval: 80; onTriggered: if (surface.item) surface.item.place() }
+  Timer { id: placing; interval: 80; onTriggered: if (root.surface) root.surface.place() }
   Timer { id: settle; interval: 150; onTriggered: { Hyprland.refreshToplevels(); assess.restart() } }
-  Timer { id: assess; interval: 200; onTriggered: if (surface.item) surface.item.assess() }
+  Timer { id: assess; interval: 200; onTriggered: if (root.surface) root.surface.assess() }
 
   Connections {
     target: Hyprland
@@ -156,16 +158,19 @@ Item {
     function reload(): void { layoutFile.reload() }
     function status(): string {
       return JSON.stringify({ mode: root.mode, covered: root.covered, away: away.isIdle, sharing: root.sharing,
-                              live: surface.item ? surface.item.live : false, tiles: surface.item ? surface.item.items("").length : 0 })
+                              live: root.surface ? root.surface.live : false, tiles: root.surface ? root.surface.items("").length : 0 })
     }
   }
 
-  LazyLoader {
-    id: surface
-    active: Quickshell.screens.length > 0
+  // one window per screen object: a monitor that powers off takes its screen away, and the window has to be
+  // built again for the one that comes back. bound once to screens[0] it stayed on the dead screen for good
+  Variants {
+    model: Quickshell.screens.length > 0 ? [Quickshell.screens[0]] : []
 
     PanelWindow {
       id: window
+
+      required property var modelData
 
       readonly property var monitor: Hyprland.monitorFor(screen)
       readonly property bool lifted: root.mode !== "desktop"
@@ -196,7 +201,7 @@ Item {
         root.covered = tiled > 0
       }
 
-      screen: Quickshell.screens[0]
+      screen: modelData
       anchors { top: true; bottom: true; left: true; right: true }
       exclusionMode: ExclusionMode.Ignore
       color: "transparent"
@@ -204,7 +209,13 @@ Item {
       WlrLayershell.layer: lifted ? WlrLayer.Overlay : WlrLayer.Bottom
       WlrLayershell.keyboardFocus: lifted ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-      Component.onCompleted: { Hyprland.refreshMonitors(); settle.restart() }
+      Component.onCompleted: {
+        root.surface = window
+        root.placed = ""
+        Hyprland.refreshMonitors()
+        settle.restart()
+      }
+      Component.onDestruction: if (root.surface === window) root.surface = null
 
       Board {
         id: board
