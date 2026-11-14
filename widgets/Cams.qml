@@ -199,6 +199,34 @@ Item {
 
       Timer { id: again; interval: 10000; onTriggered: cell.resting = false }
 
+      // a ring stream can stay connected and stop sending pictures. 20 seconds without a new one: start over
+      property string stamp: ""
+      property int stale: 0
+
+      Timer {
+        interval: 10000
+        repeat: true
+        running: cell.wanted && puller.running
+        onRunningChanged: { cell.stamp = ""; cell.stale = 0 }
+        onTriggered: if (!watch.running) watch.running = true
+      }
+
+      Process {
+        id: watch
+        command: ["stat", "-c", "%Y", cell.still]
+        stdout: StdioCollector {
+          onStreamFinished: {
+            var written = String(text).trim()
+            cell.stale = written !== "" && written === cell.stamp ? cell.stale + 1 : 0
+            cell.stamp = written
+            if (cell.stale < 2) return
+            cell.stale = 0
+            cell.resting = true
+            again.restart()
+          }
+        }
+      }
+
       Connections {
         target: widget
         function onFrameChanged() { cell.load() }
